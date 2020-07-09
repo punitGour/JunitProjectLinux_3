@@ -1,0 +1,32 @@
+version: 0.2
+
+variables:
+  # This will supress any download for dependencies and plugins or upload messages which would clutter the console log.
+  # `showDateTime` will show the passed time in milliseconds. You need to specify `--batch-mode` to make this work.
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
+  # when running from the command line.
+  # `installAtEnd` and `deployAtEnd`are only effective with recent version of the corresponding plugins.
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+ 
+ 
+# Cache downloaded dependencies and plugins between builds.
+# To keep cache across branches add 'key: "$CI_JOB_REF_NAME"'
+cache:
+  paths:
+    - .m2/repository
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto8
+  build:
+     commands:
+          - echo "building my amazing repo..."
+          - mvn test
+          - curl --version
+          - export token=$(curl -H "Content-Type:application/json" -X POST --data "{ \"client_id\":\"B9B92CC6655B4421B8B536A9FF318094\",\"client_secret\":\"0332eddb162e3d6c1d5fddc8748a7363fc36f09e023dbcf4a141606e663bff15\" }" https://xraydemoone.atlassian.net/api/v1/authenticate | tr -d '"')
+          - echo $token
+          - curl -H "Content-Type:text/xml" -X POST -H "Authorization:Bearer $token"  --data @"target/surefire-reports/TEST-JunitProject_2.JunitProject_2.FirstTest.xml" https://xraydemoone.atlassian.net/api/v1/import/execution/junit?projectKey=J1&testPlanKey=J1-2&revision=Version-1.0
+          - echo "done"
+          
